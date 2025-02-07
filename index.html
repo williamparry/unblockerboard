@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>unblockerboard</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      font-family: sans-serif;
+      background: #fafafa;
+    }
+    #graphContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: #fafafa;
+    }
+    #charCountIndicator {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #ccc;
+      padding: 2px 6px;
+      font-size: 12px;
+      z-index: 1000;
+      border-radius: 4px;
+    }
+    #boardContent {
+      position: absolute;
+    }
+    .node-box {
+      position: absolute;
+      min-width: 120px;
+      padding: 0 30px;
+      height: 40px;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #fff;
+      box-sizing: border-box;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      line-height: 40px;
+    }
+    .node-box.editing {
+      border-color: #999;
+    }
+    .node-label {
+      display: block;
+      text-align: center;
+      pointer-events: none;
+    }
+    .placeholder-box {
+      position: absolute;
+      width: 120px;
+      height: 40px;
+      border: 2px dotted #666;
+      border-radius: 6px;
+      background: rgba(200,200,200,0.3);
+      box-sizing: border-box;
+      text-align: center;
+      line-height: 40px;
+      font-style: italic;
+      cursor: pointer;
+      user-select: none;
+    }
+    .inline-editor {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: none;
+      background: #fff;
+      box-sizing: border-box;
+      text-align: center;
+      font-size: inherit;
+      padding: 0;
+      margin: 0;
+      line-height: 1;
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .arrow-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    .edit-icon {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #ddd;
+      color: #333;
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+      border-radius: 3px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .count-icon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #eee;
+      color: #333;
+      font-size: 10px;
+      text-align: center;
+      border-radius: 50%;
+      z-index: 10;
+      transform: translate(50%, -50%);
+    }
+  </style>
+</head>
+<body>
+  <div id="charCountIndicator"></div>
+  <div id="graphContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+  <script>
+    var NODE_W = 120, NODE_H = 40, X_GAP = 200, Y_GAP = 50;
+    var activeInput = null;
+    var inlineEditNode = -1;
+    var selectedForAdd = -1;
+
+    var defaultBoard = {
+      n: [["final", "Complete!"]],
+      e: []
+    };
+    var board = null;
+
+    function encodeBoard(b) { return LZString.compressToEncodedURIComponent(JSON.stringify(b)); }
+    function decodeBoard(str) { return JSON.parse(LZString.decompressFromEncodedURIComponent(str)); }
+    function loadBoardFromHash() {
+      var h = window.location.hash.slice(1);
+      return h ? decodeBoard(h) : null;
+    }
+    function saveBoardToHash(b) { window.history.replaceState(null, "", "#" + encodeBoard(b)); }
+
+    function getBlockers(b, nodeIdx) {
+      var arr = [];
+      for (var i = 0; i < b.e.length; i++) {
+        var e = b.e[i];
+        if (e[1] === nodeIdx) { arr.push(e[0]); }
+      }
+      return arr;
+    }
+
+    function getNodeWidth(nodeIdx) {
+      var text = board.n[nodeIdx][1];
+      var calc = text.length * 10 + 60;
+      return Math.max(120, calc);
+    }
+
+    function measureSubtree(nodeIdx) {
+      if (nodeIdx === -1) {
+        return { nodeIdx: -1, width: 120, height: NODE_H, children: [] };
+      }
+      var width = getNodeWidth(nodeIdx);
+      var deps = getBlockers(board, nodeIdx);
+      var childSubs = deps.map(measureSubtree);
+      if (nodeIdx === selectedForAdd) {
+        childSubs.push({ nodeIdx: -1, width: 120, height: NODE_H, children: [] });
+      }
+      if (childSubs.length === 0) {
+        return { nodeIdx: nodeIdx, width: width, height: NODE_H, children: [] };
+      } else {
+        var totalHeight = 0;
+        childSubs.forEach(function (st) { totalHeight += st.height; });
+        totalHeight += (childSubs.length - 1) * Y_GAP;
+        return { nodeIdx: nodeIdx, width: width, height: Math.max(NODE_H, totalHeight), children: childSubs };
+      }
+    }
+    var layoutItems = [];
+    var layoutEdges = [];
+    function layoutSubtree(st, parentIdx, x, topY) {
+      var nodeIdx = st.nodeIdx, w = st.width, h = st.height, midY = topY + h / 2;
+      if (nodeIdx >= 0) {
+        layoutItems.push({ type: "node", nodeIdx: nodeIdx, x: x, y: midY, width: w });
+        if (parentIdx !== null && parentIdx >= 0) {
+          layoutEdges.push({ x1: x + w / 2, y1: midY, x2: 0, y2: 0, parentNodeIdx: parentIdx, dashed: false });
+        }
+      } else {
+        layoutItems.push({ type: "placeholder", parent: parentIdx, x: x, y: midY, width: 120 });
+        if (parentIdx !== null && parentIdx >= 0) {
+          layoutEdges.push({ x1: x + 120 / 2, y1: midY, x2: 0, y2: 0, parentNodeIdx: parentIdx, dashed: true });
+        }
+      }
+      var usedY = topY;
+      st.children.forEach(function (childSt) {
+        layoutSubtree(childSt, (nodeIdx >= 0 ? nodeIdx : parentIdx), x - X_GAP, usedY);
+        usedY += childSt.height + Y_GAP;
+      });
+    }
+    function fixEdges() {
+      var posMap = {};
+      layoutItems.forEach(function (it) {
+        if (it.type === "node" && it.nodeIdx >= 0) {
+          posMap[it.nodeIdx] = { x: it.x, y: it.y, width: it.width };
+        }
+      });
+      layoutEdges.forEach(function (ed) {
+        var ppos = posMap[ed.parentNodeIdx];
+        if (ppos) { ed.x2 = ppos.x - ppos.width / 2; ed.y2 = ppos.y; }
+      });
+    }
+    function computeLayout() {
+      var container = document.getElementById("graphContainer");
+      var w = container.offsetWidth, h = container.offsetHeight;
+      var rootX = container.offsetWidth - getNodeWidth(0);
+      var rootSt = measureSubtree(0);
+      layoutItems = [];
+      layoutEdges = [];
+      var topY = Math.max(0, (h - rootSt.height) / 2);
+      layoutSubtree(rootSt, null, rootX, topY);
+      fixEdges();
+      return { layoutItems, layoutEdges };  // Return layout data
+    }
+    function countDirectChildren(nodeIdx) {
+      return getBlockers(board, nodeIdx).length;
+    }
+    function totalCharCount() {
+      var count = 0;
+      board.n.forEach(function (node) { count += node[1].length; });
+      return count;
+    }
+    function getCountIconSize(count) {
+      return 16 + count * 2;
+    }
+    function createBezier(x1, y1, x2, y2) {
+      var mx = (x1 + x2) / 2;
+      return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+    }
+
+    function renderBoard() {
+      const { layoutItems, layoutEdges } = computeLayout();
+
+      var margin = 50;
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      layoutItems.forEach(function (it) {
+        if (it.x < minX) minX = it.x;
+        if (it.y < minY) minY = it.y;
+        if (it.x > maxX) maxX = it.x;
+        if (it.y > maxY) maxY = it.y;
+      });
+      minX -= margin / 2; minY -= margin / 2;
+      maxX += margin / 2; maxY += margin / 2;
+      var contentWidth = maxX - minX, contentHeight = maxY - minY;
+
+      var boardContent = document.getElementById("boardContent");
+      if (!boardContent) {
+        boardContent = document.createElement("div");
+        boardContent.id = "boardContent";
+        boardContent.style.position = "absolute";
+        document.getElementById("graphContainer").appendChild(boardContent);
+      }
+      boardContent.style.width = contentWidth + "px";
+      boardContent.style.height = contentHeight + "px";
+
+      var node0 = layoutItems.find(function (it) { return it.type === "node" && it.nodeIdx === 0; });
+      var node0ShiftedX = node0 ? (node0.x - minX) : 0;
+      var node0ShiftedY = node0 ? (node0.y - minY) : 0;
+      var containerEl = document.getElementById("graphContainer");
+      var offsetX = containerEl.offsetWidth - getNodeWidth(0) - node0ShiftedX;
+      var offsetY = containerEl.offsetHeight / 2 - NODE_H / 2 - node0ShiftedY;
+      boardContent.style.left = offsetX + "px";
+      boardContent.style.top = offsetY + "px";
+
+      boardContent.innerHTML = "";
+
+      var charCountIndicator = document.getElementById("charCountIndicator");
+      charCountIndicator.textContent = totalCharCount() + " / 2000";
+
+      layoutItems.forEach(function (it) {
+        var left = (it.x - minX) - (it.width / 2);
+        var top = (it.y - minY) - (NODE_H / 2);
+        if (it.type === "node") {
+          var el = document.createElement("div");
+          el.className = "node-box";
+          el.dataset.nodeIdx = it.nodeIdx;
+          el.style.left = left + "px";
+          el.style.top = top + "px";
+          el.style.width = it.width + "px";
+
+          var labelSpan = document.createElement("span");
+          labelSpan.className = "node-label";
+          labelSpan.textContent = board.n[it.nodeIdx][1];
+          el.appendChild(labelSpan);
+
+          var editIcon = document.createElement("div");
+          editIcon.className = "edit-icon";
+          editIcon.innerHTML = "✎";
+          el.appendChild(editIcon);
+
+          var directCount = countDirectChildren(it.nodeIdx);
+          var circleSize = getCountIconSize(directCount);
+          var countIcon = document.createElement("div");
+          countIcon.className = "count-icon";
+          countIcon.style.width = circleSize + "px";
+          countIcon.style.height = circleSize + "px";
+          countIcon.style.lineHeight = circleSize + "px";
+          countIcon.textContent = directCount;
+          el.appendChild(countIcon);
+
+          // Click Handler: Clear selectedForAdd if clicking a different node
+          el.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (inlineEditNode === -1) {
+              selectedForAdd = (selectedForAdd === it.nodeIdx) ? -1 : it.nodeIdx; // Toggle selection
+              renderBoard();
+            }
+          });
+          boardContent.appendChild(el);
+        } else if (it.type === "placeholder") {
+          var ph = document.createElement("div");
+          ph.className = "placeholder-box";
+          ph.style.left = left + "px";
+          ph.style.top = top + "px";
+          ph.textContent = "Add Blocker";
+          ph.addEventListener("click", function (e) {
+            e.stopPropagation();
+            startPlaceholderInlineEditing(ph, it.parent);
+          });
+          boardContent.appendChild(ph);
+            // Auto-start (if applicable)
+          if (it.parent === selectedForAdd && inlineEditNode === -1) {
+            startPlaceholderInlineEditing(ph, it.parent);
+          }
+        }
+      });
+
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.classList.add("arrow-layer");
+      svg.setAttribute("width", contentWidth);
+      svg.setAttribute("height", contentHeight);
+      boardContent.appendChild(svg);
+      layoutEdges.forEach(function (ed) {
+        var x1 = ed.x1 - minX, y1 = ed.y1 - minY;
+        var x2 = ed.x2 - minX, y2 = ed.y2 - minY;
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", createBezier(x1, y1, x2, y2));
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke-width", "2");
+        if (ed.dashed) {
+          path.setAttribute("stroke", "#666");
+          path.setAttribute("stroke-dasharray", "4,4");
+        } else {
+          path.setAttribute("stroke", "#000");
+        }
+        svg.appendChild(path);
+      });
+
+      var node0El = boardContent.querySelector(".node-box[data-node-idx='0']");
+      if (node0El) {
+        containerEl.scrollLeft = boardContent.offsetWidth - containerEl.offsetWidth;
+        var rect = node0El.getBoundingClientRect();
+        containerEl.scrollTop = Math.max(0, rect.top - containerEl.offsetHeight / 2 + NODE_H / 2);
+      }
+    }
+
+    function startNodeInlineEditing(nodeIdx) {
+
+      var container = document.getElementById("boardContent");
+      var el = container.querySelector(".node-box[data-node-idx='" + nodeIdx + "']");
+      if (!el) return;
+
+      inlineEditNode = nodeIdx;
+      var labelSpan = el.querySelector(".node-label");
+      if (!labelSpan) return;
+      var oldText = labelSpan.textContent;
+      var input = document.createElement("input");
+      input.type = "text";
+      input.value = oldText;
+      input.className = "inline-editor";
+      var allowed = 2000 - (totalCharCount() - oldText.length);
+      input.maxLength = allowed;
+      input.style.width = el.clientWidth + "px";
+      activeInput = input;
+      el.replaceChild(input, labelSpan);
+      setTimeout(function () { input.focus(); input.select(); }, 0);
+      
+      // Handle changes on Enter key press *synchronously*
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          var newText = input.value.trim();
+          if (!newText) newText = oldText;  // Keep old text if empty
+          board.n[nodeIdx][1] = newText;
+          var newLabel = document.createElement("span");
+          newLabel.className = "node-label";
+          newLabel.textContent = newText;
+          el.replaceChild(newLabel, input);
+          inlineEditNode = -1;
+          selectedForAdd = -1;
+          activeInput = null;
+          saveBoardToHash(board);
+          renderBoard();
+        }
+      });
+    }
+
+    function startPlaceholderInlineEditing(ph, parentIdx) {
+      ph.innerHTML = "";
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "inline-editor";
+      input.maxLength = 2000 - totalCharCount();
+      ph.appendChild(input);
+      activeInput = input;
+      setTimeout(function () { input.focus(); input.select(); }, 0);
+      
+      // Handle changes on Enter key press *synchronously*
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          var text = input.value.trim();
+          activeInput = null;
+          if (text) {
+            var newIdx = board.n.length;
+            var newId = "node-" + Date.now();
+            board.n.push([newId, text]);
+            board.e.push([newIdx, parentIdx]);
+            selectedForAdd = parentIdx; // Keep "Add Blocker"
+            saveBoardToHash(board);
+          } else {
+              //clear
+              selectedForAdd = -1;
+          }
+            renderBoard(); // Re-render immediately
+        }
+      });
+    }
+
+    document.addEventListener("mousedown", function (e) {
+      selectedForAdd = -1
+      inlineEditNode = -1;
+      if(e.target.className === 'node-box') {
+       selectedForAdd = parseInt(e.target.dataset.nodeIdx);
+       renderBoard();
+      } else if(e.target.className === 'edit-icon') {
+        renderBoard();
+        startNodeInlineEditing(parseInt(e.target.parentNode.dataset.nodeIdx))
+      } else {
+        renderBoard();
+      }
+
+    });
+
+    function init() {
+      board = loadBoardFromHash() || defaultBoard;
+      if(board.n.length === 1) {
+        selectedForAdd = 0; // Show "Add Blocker" initially
+      }
+      
+      renderBoard();
+      saveBoardToHash(board);
+      window.addEventListener("resize", renderBoard);
+    }
+
+    // No need for mousedown event.
+    window.addEventListener("load", init);
+  </script>
+</body>
+
+</html>
