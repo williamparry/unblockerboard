@@ -195,6 +195,14 @@
       display: block;
       margin-bottom: 15px;
     }
+
+    #how-it-works {
+      flex-shrink: 0;
+    }
+
+    #how-it-works summary {
+      font-weight: bold;
+    }
   </style>
 </head>
 
@@ -202,8 +210,20 @@
   <div id="boardControls">
     <button id="newBoard">New</button>
     <div id="charCountIndicator">
-      <button class="padlock" id="padlockIcon"></button>
+      <button class="padlock" id="padlockIcon">🔓</button>
       <div id="charCountText"></div>
+    </div>
+    <div id="how-it-works">
+      <details>
+        <summary>How it works</summary>
+        <p>Quickly build a dependency graph of blockers to get something done.</p>
+        <p>Share the URL with friends/co-workers if you want.</p>
+        <p>Optionally encrypt the board.</p>
+        <p>Maximum URL size is 2048, which is why there's a character count on the page.</p>
+      </details>
+    </div>
+    <div>
+      <a href="https://github.com/williamparry/unblockerboard">Github</a>
     </div>
     <div id="terms">THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
       NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
