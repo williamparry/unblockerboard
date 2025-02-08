@@ -37,15 +37,22 @@
       align-items: center;
       display: flex;
       column-gap: 10px;
+      max-width: calc(100% - 10px);
     }
 
     #charCountIndicator {
       display: none;
+      flex-shrink: 0;
     }
 
     #charCountIndicator .padlock {
       cursor: pointer;
       margin-right: 4px;
+    }
+
+    #terms {
+      overflow: scroll;
+      text-wrap: nowrap;
     }
 
     #passphraseModal {
@@ -197,6 +204,7 @@
       <span class="padlock" id="padlockIcon"></span>
       <span id="charCountText"></span>
     </div>
+    <span id="terms">THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</span>
   </div>
 
   <div id="passphraseModal">
