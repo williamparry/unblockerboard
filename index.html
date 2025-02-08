@@ -43,11 +43,12 @@
     #charCountIndicator {
       display: none;
       flex-shrink: 0;
+      align-items: center;
     }
 
     #charCountIndicator .padlock {
       cursor: pointer;
-      margin-right: 4px;
+      margin-right: 10px;
     }
 
     #terms {
@@ -201,10 +202,14 @@
   <div id="boardControls">
     <button id="newBoard">New</button>
     <div id="charCountIndicator">
-      <span class="padlock" id="padlockIcon"></span>
-      <span id="charCountText"></span>
+      <button class="padlock" id="padlockIcon"></button>
+      <div id="charCountText"></div>
     </div>
-    <span id="terms">THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</span>
+    <div id="terms">THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+      NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+      EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+      DEALINGS IN THE SOFTWARE.</div>
   </div>
 
   <div id="passphraseModal">
@@ -482,12 +487,7 @@
     }
 
     function totalCharCount() {
-      var count = 0;
-      // Only count user-entered nodes, not the "Complete!" node.
-      for (let i = 1; i < board.n.length; i++) { // Start from index 1
-        count += board.n[i][1].length;
-      }
-      return count;
+      return window.location.href.length;
     }
 
     function getCountIconSize(count) {
@@ -498,7 +498,7 @@
       var mx = (x1 + x2) / 2;
       return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
     }
-    
+
     function removeNode(nodeIdx) {
       // Prevent removal of the root node (index 0)
       if (nodeIdx === 0) return;
@@ -574,7 +574,7 @@
 
       var charCountIndicator = document.getElementById("charCountIndicator");
       var charCountText = document.getElementById("charCountText");
-      charCountText.textContent = totalCharCount() + " / 2000";
+      charCountText.textContent = totalCharCount() + " / 2048";
 
       layoutItems.forEach(function (it) {
         var left = (it.x - minX) - (it.width / 2);
@@ -785,7 +785,7 @@
             localStorage.setItem("passphrase", activePassphrase);
             encryptedByOwner = true;
             passphraseDisplay.value = activePassphrase;
-            padlockIcon.innerHTML = LOCK_ICON;
+            padlockIcon.innerHTML = LOCK_ICON + " Encrypted";
             saveBoardToHash(board);
           }
           passphraseModal.style.display = "block";
@@ -800,9 +800,9 @@
         });
 
         if (activePassphrase) {
-          padlockIcon.innerHTML = LOCK_ICON;
+          padlockIcon.innerHTML = LOCK_ICON + " Encrypted";
         } else {
-          padlockIcon.innerHTML = UNLOCK_ICON;
+          padlockIcon.innerHTML = UNLOCK_ICON + " Encrypt";
         }
 
         document.addEventListener("mousedown", function (e) {
@@ -810,7 +810,7 @@
           inlineEditNode = -1;
           if (e.target.classList.contains("check-icon")) {
             const nodeIndex = parseInt(e.target.parentNode.dataset.nodeIdx)
-            if(nodeIndex > 0) {
+            if (nodeIndex > 0) {
               removeNode(nodeIndex);
               saveBoardToHash(board);
               renderBoard();
