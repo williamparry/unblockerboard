@@ -1,0 +1,198 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    font-family: sans-serif;
+    background: #fafafa;
+}
+
+#graphContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: #fafafa;
+}
+
+#boardControls {
+    position: fixed;
+    top: 5px;
+    left: 5px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    padding: 2px 6px;
+    font-size: 12px;
+    z-index: 1000;
+    border-radius: 4px;
+    align-items: center;
+    display: flex;
+    column-gap: 10px;
+    max-width: calc(100% - 10px);
+}
+
+#charCountIndicator {
+    display: none;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+#charCountIndicator .padlock {
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+#terms {
+    overflow: scroll;
+    text-wrap: nowrap;
+}
+
+#passphraseModal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid #ccc;
+    padding: 20px;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    max-width: 80%;
+    /* Responsive width */
+    word-break: break-all;
+    /* Prevent overflow */
+}
+
+#passphraseModal p {
+    margin: 0 0 10px;
+    /* Spacing for the text */
+}
+
+#passphraseModal button {
+    display: block;
+    /* Make button full width */
+    margin: 0 auto;
+    /* Center the button */
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+}
+
+#boardContent {
+    position: absolute;
+}
+
+.node-box {
+    position: absolute;
+    min-width: 120px;
+    padding: 0 30px;
+    height: 40px;
+    border: 2px solid #000;
+    border-radius: 6px;
+    background: #fff;
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    line-height: 40px;
+}
+
+.node-box.editing {
+    border-color: #999;
+}
+
+.node-label {
+    display: block;
+    text-align: center;
+    pointer-events: none;
+}
+
+.placeholder-box {
+    position: absolute;
+    width: 120px;
+    height: 40px;
+    border: 2px dotted #666;
+    border-radius: 6px;
+    background: rgba(200, 200, 200, 0.3);
+    box-sizing: border-box;
+    text-align: center;
+    line-height: 40px;
+    font-style: italic;
+    cursor: pointer;
+    user-select: none;
+}
+
+.inline-editor {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: #fff;
+    box-sizing: border-box;
+    text-align: center;
+    font-size: inherit;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.arrow-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.edit-icon {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #ddd;
+    color: #333;
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.count-icon,
+.check-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #eee;
+    color: #333;
+    font-size: 10px;
+    text-align: center;
+    border-radius: 50%;
+    z-index: 10;
+    transform: translate(50%, -50%);
+}
+
+#passphraseDisplay {
+    width: 250px;
+    display: block;
+    margin-bottom: 15px;
+}
+
+#how-it-works {
+    flex-shrink: 0;
+}
+
+#how-it-works summary {
+    font-weight: bold;
+}
