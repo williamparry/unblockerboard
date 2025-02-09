@@ -1,4 +1,6 @@
-# unblockerboard.com
+# [unblockerboard.com](https://unblockerboard.com)
+
+<img width="844" alt="Screenshot 2025-02-09 at 1 03 04 pm" src="https://github.com/user-attachments/assets/ad9b9e48-3b4d-49bd-88d5-07ac412397c0" />
 
 ## How it works
 
