@@ -495,6 +495,7 @@ function startPlaceholderInlineEditing(ph, parentIdx) {
     ph.innerHTML = "";
     var input = document.createElement("input");
     input.type = "text";
+    input.placeholder = "Add Blocker";
     input.className = "inline-editor";
     input.maxLength = 2000 - totalCharCount();
     ph.appendChild(input);
