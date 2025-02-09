@@ -9,6 +9,23 @@ body {
     background: #fafafa;
 }
 
+@media screen and (max-width: 480px) {
+    body::after {
+        content: "This doesn't work on mobile yet. There's a Github issue for it if you'd like to help out.";
+        display: block;
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: #fff;
+        z-index: 9999;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    
+}
+
 #graphContainer {
     position: relative;
     width: 100%;
